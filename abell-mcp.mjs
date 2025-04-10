@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import create from "create-abell";
+import { execSync } from "child_process";
 
 // Create an MCP server
 const server = new McpServer({
@@ -10,28 +10,40 @@ const server = new McpServer({
 });
 
 // Add an addition tool
-server.tool("get_abell_syntax", {}, async () => {
-  const syntaxGuide = await fetch("https://abelljs.org/ai/llms.txt").then(
-    (res) => res.text()
-  );
-  return {
-    content: [{ type: "text", text: syntaxGuide }],
-  };
-});
+server.tool(
+  "get_abell_syntax",
+  "This is to help understand the syntax of Abell and get basic understanding of abell",
+  {},
+  async () => {
+    const syntaxGuide = await fetch("https://abelljs.org/ai/llms.txt").then(
+      (res) => res.text()
+    );
+    return {
+      content: [{ type: "text", text: syntaxGuide }],
+    };
+  }
+);
 
 server.tool(
   "scaffold_abell_app",
+  "This scaffolds a full fledge abell application. Note: Before calling tool, ensure you're in current working directory, ensure the directory is empty. Use `.` as projectName when not explicitly mentioned",
   {
     projectName: z.string(),
-    installer: z.enum(["npm", "pnpm", "yarn"]),
-    template: z.string(),
+    cwd: z.string(),
   },
-  async ({ projectName, installer = "npm", template = "default" }) => {
-    const app = await create(projectName, {
-      installer,
-      template,
-    });
-    return { content: [{ type: "text", text: app }] };
+  async ({ projectName = ".", cwd }) => {
+    execSync(
+      `npx create-abell@latest ${projectName} --installer skip --template default`,
+      { stdio: "inherit", cwd }
+    );
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Scaffolded ${projectName}`,
+        },
+      ],
+    };
   }
 );
 
